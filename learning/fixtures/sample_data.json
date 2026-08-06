@@ -1,0 +1,71 @@
+[
+  {
+    "model": "learning.lesson",
+    "pk": 1,
+    "fields": {
+      "title": "Greetings",
+      "description": "Common greetings and polite expressions.",
+      "created_at": "2026-08-06T00:00:00Z",
+      "updated_at": "2026-08-06T00:00:00Z"
+    }
+  },
+  {
+    "model": "learning.lesson",
+    "pk": 2,
+    "fields": {
+      "title": "Family",
+      "description": "Words related to family members.",
+      "created_at": "2026-08-06T00:00:00Z",
+      "updated_at": "2026-08-06T00:00:00Z"
+    }
+  },
+  {
+    "model": "learning.lesson",
+    "pk": 3,
+    "fields": {
+      "title": "Food",
+      "description": "Useful food-related vocabulary.",
+      "created_at": "2026-08-06T00:00:00Z",
+      "updated_at": "2026-08-06T00:00:00Z"
+    }
+  },
+  {
+    "model": "learning.vocabulary",
+    "pk": 1,
+    "fields": {
+      "lesson": 1,
+      "word": "Hello",
+      "meaning": "হ্যালো / অভিবাদন",
+      "pronunciation": "heh-loh",
+      "example": "Hello, how are you?",
+      "created_at": "2026-08-06T00:00:00Z",
+      "updated_at": "2026-08-06T00:00:00Z"
+    }
+  },
+  {
+    "model": "learning.vocabulary",
+    "pk": 2,
+    "fields": {
+      "lesson": 2,
+      "word": "Mother",
+      "meaning": "মা",
+      "pronunciation": "",
+      "example": "My mother is a teacher.",
+      "created_at": "2026-08-06T00:00:00Z",
+      "updated_at": "2026-08-06T00:00:00Z"
+    }
+  },
+  {
+    "model": "learning.vocabulary",
+    "pk": 3,
+    "fields": {
+      "lesson": 3,
+      "word": "Rice",
+      "meaning": "ভাত",
+      "pronunciation": "",
+      "example": "Rice is a common food in Bangladesh.",
+      "created_at": "2026-08-06T00:00:00Z",
+      "updated_at": "2026-08-06T00:00:00Z"
+    }
+  }
+]
