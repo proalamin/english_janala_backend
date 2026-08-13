@@ -233,7 +233,6 @@ Use any Postman-compatible REST client.
   "lesson": 1,
   "word": "Hello",
   "meaning": "হ্যালো / অভিবাদন",
-  "pronunciation": "heh-loh",
   "example": "Hello, how are you?"
 }
 ```

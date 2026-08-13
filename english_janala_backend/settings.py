@@ -1,12 +1,28 @@
 """Django settings for English Janala."""
+import os
 from pathlib import Path
+
+try:
+    from dotenv import load_dotenv
+except ImportError:  # Keeps manage.py importable before dependencies are installed.
+    load_dotenv = None
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-english-janala-lite-dev-key'
-DEBUG = True
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver', '192.168.0.140']
+if load_dotenv:
+    load_dotenv(BASE_DIR / '.env')
+
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-english-janala-lite-dev-key')
+DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() == 'true'
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv(
+        'DJANGO_ALLOWED_HOSTS',
+        'localhost,127.0.0.1,testserver,192.168.0.140,10.205.73.91',
+    ).split(',')
+    if host.strip()
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -50,12 +66,29 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'english_janala_backend.wsgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+DATABASE_ENGINE = os.getenv('DATABASE_ENGINE', 'mysql').lower()
+
+if DATABASE_ENGINE == 'sqlite':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.getenv('DB_NAME', 'english_janala_db'),
+            'USER': os.getenv('DB_USER', 'root'),
+            'PASSWORD': os.getenv('DB_PASSWORD', ''),
+            'HOST': os.getenv('DB_HOST', '127.0.0.1'),
+            'PORT': os.getenv('DB_PORT', '3306'),
+            'OPTIONS': {
+                'charset': 'utf8mb4',
+            },
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -85,17 +118,18 @@ REST_FRAMEWORK = {
 }
 
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'http://192.168.0.140:5173',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
+    origin.strip()
+    for origin in os.getenv(
+        'CORS_ALLOWED_ORIGINS',
+        'http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174,http://192.168.0.140:5173,http://10.205.73.91:5174,http://localhost:3000,http://127.0.0.1:3000',
+    ).split(',')
+    if origin.strip()
 ]
 
 CORS_ALLOWED_ORIGIN_REGEXES = [
-    r'^http://192\.168\.\d{1,3}\.\d{1,3}:5173$',
-    r'^http://10\.\d{1,3}\.\d{1,3}\.\d{1,3}:5173$',
-    r'^http://172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}:5173$',
+    r'^http://192\.168\.\d{1,3}\.\d{1,3}:517[3-9]$',
+    r'^http://10\.\d{1,3}\.\d{1,3}\.\d{1,3}:517[3-9]$',
+    r'^http://172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}:517[3-9]$',
 ]
 
 CORS_ALLOW_CREDENTIALS = True

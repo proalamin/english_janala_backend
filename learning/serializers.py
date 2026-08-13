@@ -39,6 +39,18 @@ class VocabularySerializer(serializers.ModelSerializer):
             'updated_at',
         ]
 
+    def validate_word(self, value):
+        word = value.strip()
+        if not word:
+            raise serializers.ValidationError('Word is required.')
+        return word
+
+    def validate_meaning(self, value):
+        meaning = value.strip()
+        if not meaning:
+            raise serializers.ValidationError('Meaning is required.')
+        return meaning
+
     def validate(self, attrs):
         lesson = attrs.get('lesson') or getattr(self.instance, 'lesson', None)
         word = attrs.get('word') or getattr(self.instance, 'word', None)
@@ -52,6 +64,9 @@ class VocabularySerializer(serializers.ModelSerializer):
             attrs['pronunciation'] = attrs['pronunciation'].strip()
         if 'example' in attrs:
             attrs['example'] = attrs['example'].strip()
+
+        if not lesson:
+            raise serializers.ValidationError({'lesson': 'Lesson is required.'})
 
         if lesson and word:
             exists = Vocabulary.objects.filter(lesson=lesson, word__iexact=word)

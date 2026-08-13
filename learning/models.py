@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
@@ -9,6 +10,16 @@ class Lesson(models.Model):
 
     class Meta:
         ordering = ['title']
+
+    def clean(self):
+        if not self.title or not self.title.strip():
+            raise ValidationError({'title': 'Lesson title is required.'})
+        self.title = self.title.strip()
+        self.description = self.description.strip() if self.description else ''
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.title
