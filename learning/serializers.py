@@ -1,3 +1,5 @@
+from django.db.models import Max
+
 from rest_framework import serializers
 
 from .models import BUNDLE_CAPACITY, Lesson, Segment, Vocabulary
@@ -32,6 +34,7 @@ class LessonSerializer(serializers.ModelSerializer):
     vocabulary_count = serializers.ReadOnlyField()
     is_full = serializers.ReadOnlyField()
     capacity = serializers.SerializerMethodField()
+    serial = serializers.ReadOnlyField()
 
     class Meta:
         model = Lesson
@@ -39,6 +42,7 @@ class LessonSerializer(serializers.ModelSerializer):
             'id',
             'segment',
             'segment_name',
+            'serial',
             'title',
             'description',
             'vocabulary_count',
@@ -47,27 +51,39 @@ class LessonSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
         ]
+        extra_kwargs = {
+            'title': {'required': False, 'allow_blank': True},
+            'segment': {'required': False},
+        }
 
     def get_capacity(self, obj):
         return BUNDLE_CAPACITY
 
     def validate_title(self, value):
-        title = value.strip()
-        if not title:
-            raise serializers.ValidationError('Lesson title is required.')
-
-        exists = Lesson.objects.filter(title__iexact=title)
-        if self.instance:
-            exists = exists.exclude(pk=self.instance.pk)
-        if exists.exists():
-            raise serializers.ValidationError('A lesson with this title already exists.')
-
+        title = value.strip() if value else ''
+        if title:
+            exists = Lesson.objects.filter(title__iexact=title)
+            if self.instance:
+                exists = exists.exclude(pk=self.instance.pk)
+            if exists.exists():
+                raise serializers.ValidationError('A bundle with this title already exists.')
         return title
+
+    def create(self, validated_data):
+        segment = validated_data.get('segment')
+        if not segment:
+            raise serializers.ValidationError({'segment': 'Segment is required.'})
+        next_serial = (segment.bundles.aggregate(Max('serial'))['serial__max'] or 0) + 1
+        if not validated_data.get('title'):
+            validated_data['title'] = f'{segment.name} - Bundle {next_serial}'
+        validated_data['serial'] = next_serial
+        return super().create(validated_data)
 
 
 class VocabularySerializer(serializers.ModelSerializer):
     lesson_title = serializers.CharField(source='lesson.title', read_only=True)
     segment_name = serializers.CharField(source='lesson.segment.name', read_only=True)
+    bundle_serial = serializers.IntegerField(source='lesson.serial', read_only=True)
 
     class Meta:
         model = Vocabulary
@@ -76,6 +92,7 @@ class VocabularySerializer(serializers.ModelSerializer):
             'lesson',
             'lesson_title',
             'segment_name',
+            'bundle_serial',
             'word',
             'meaning',
             'pronunciation',

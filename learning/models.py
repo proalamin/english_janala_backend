@@ -23,19 +23,44 @@ class Segment(models.Model):
         self.full_clean()
         super().save(*args, **kwargs)
 
+    def get_open_bundle(self):
+        """Return the first bundle under this segment with space left, or create a new one."""
+        open_bundle = (
+            self.bundles.annotate(word_count=models.Count('vocabulary_words'))
+            .filter(word_count__lt=BUNDLE_CAPACITY)
+            .order_by('serial')
+            .first()
+        )
+        if open_bundle:
+            return open_bundle
+        return self.create_next_bundle()
+
+    def create_next_bundle(self, description=''):
+        next_serial = (self.bundles.aggregate(models.Max('serial'))['serial__max'] or 0) + 1
+        return Lesson.objects.create(
+            segment=self,
+            serial=next_serial,
+            title=f'{self.name} - Bundle {next_serial}',
+            description=description,
+        )
+
     def __str__(self):
         return self.name
 
 
 class Lesson(models.Model):
     segment = models.ForeignKey(Segment, on_delete=models.PROTECT, related_name='bundles')
+    serial = models.PositiveIntegerField()
     title = models.CharField(max_length=150, unique=True)
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['title']
+        ordering = ['segment__name', 'serial']
+        constraints = [
+            models.UniqueConstraint(fields=['segment', 'serial'], name='unique_serial_within_segment'),
+        ]
 
     def clean(self):
         if not self.title or not self.title.strip():
