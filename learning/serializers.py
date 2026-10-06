@@ -1,12 +1,55 @@
 from rest_framework import serializers
 
-from .models import Lesson, Vocabulary
+from .models import BUNDLE_CAPACITY, Lesson, Segment, Vocabulary
+
+
+class SegmentSerializer(serializers.ModelSerializer):
+    bundle_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Segment
+        fields = ['id', 'name', 'description', 'bundle_count', 'created_at', 'updated_at']
+
+    def get_bundle_count(self, obj):
+        return obj.bundles.count()
+
+    def validate_name(self, value):
+        name = value.strip()
+        if not name:
+            raise serializers.ValidationError('Segment name is required.')
+
+        exists = Segment.objects.filter(name__iexact=name)
+        if self.instance:
+            exists = exists.exclude(pk=self.instance.pk)
+        if exists.exists():
+            raise serializers.ValidationError('A segment with this name already exists.')
+
+        return name
 
 
 class LessonSerializer(serializers.ModelSerializer):
+    segment_name = serializers.CharField(source='segment.name', read_only=True)
+    vocabulary_count = serializers.ReadOnlyField()
+    is_full = serializers.ReadOnlyField()
+    capacity = serializers.SerializerMethodField()
+
     class Meta:
         model = Lesson
-        fields = ['id', 'title', 'description', 'created_at', 'updated_at']
+        fields = [
+            'id',
+            'segment',
+            'segment_name',
+            'title',
+            'description',
+            'vocabulary_count',
+            'is_full',
+            'capacity',
+            'created_at',
+            'updated_at',
+        ]
+
+    def get_capacity(self, obj):
+        return BUNDLE_CAPACITY
 
     def validate_title(self, value):
         title = value.strip()
@@ -24,6 +67,7 @@ class LessonSerializer(serializers.ModelSerializer):
 
 class VocabularySerializer(serializers.ModelSerializer):
     lesson_title = serializers.CharField(source='lesson.title', read_only=True)
+    segment_name = serializers.CharField(source='lesson.segment.name', read_only=True)
 
     class Meta:
         model = Vocabulary
@@ -31,10 +75,15 @@ class VocabularySerializer(serializers.ModelSerializer):
             'id',
             'lesson',
             'lesson_title',
+            'segment_name',
             'word',
             'meaning',
             'pronunciation',
             'example',
+            'part_of_speech',
+            'difficulty',
+            'synonyms',
+            'antonyms',
             'created_at',
             'updated_at',
         ]
@@ -64,9 +113,20 @@ class VocabularySerializer(serializers.ModelSerializer):
             attrs['pronunciation'] = attrs['pronunciation'].strip()
         if 'example' in attrs:
             attrs['example'] = attrs['example'].strip()
+        if 'synonyms' in attrs:
+            attrs['synonyms'] = attrs['synonyms'].strip()
+        if 'antonyms' in attrs:
+            attrs['antonyms'] = attrs['antonyms'].strip()
 
         if not lesson:
             raise serializers.ValidationError({'lesson': 'Lesson is required.'})
+
+        if lesson:
+            current_lesson = getattr(self.instance, 'lesson', None)
+            if lesson != current_lesson and lesson.vocabulary_count >= BUNDLE_CAPACITY:
+                raise serializers.ValidationError({
+                    'lesson': f'This bundle already has {BUNDLE_CAPACITY} words (max). Please choose or create another bundle.',
+                })
 
         if lesson and word:
             exists = Vocabulary.objects.filter(lesson=lesson, word__iexact=word)

@@ -33,8 +33,17 @@ class LessonDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class VocabularyListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Vocabulary.objects.select_related('lesson').all()
     serializer_class = VocabularySerializer
+
+    def get_queryset(self):
+        queryset = Vocabulary.objects.select_related('lesson').all()
+        difficulty = self.request.query_params.get('difficulty')
+        part_of_speech = self.request.query_params.get('part_of_speech')
+        if difficulty:
+            queryset = queryset.filter(difficulty=difficulty)
+        if part_of_speech:
+            queryset = queryset.filter(part_of_speech=part_of_speech)
+        return queryset
 
 
 class VocabularyDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
@@ -56,9 +65,12 @@ class VocabularySearchAPIView(generics.ListAPIView):
 
     def get_queryset(self):
         query = self.request.query_params.get('q', '').strip()
+        difficulty = self.request.query_params.get('difficulty')
         queryset = Vocabulary.objects.select_related('lesson').all()
         if query:
             queryset = queryset.filter(Q(word__icontains=query) | Q(meaning__icontains=query))
+        if difficulty:
+            queryset = queryset.filter(difficulty=difficulty)
         return queryset.order_by('lesson__title', 'word')
 
     def list(self, request, *args, **kwargs):
