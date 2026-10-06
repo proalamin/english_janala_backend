@@ -117,6 +117,29 @@ class VocabularySerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Meaning is required.')
         return meaning
 
+    def validate_synonyms(self, value):
+        return self._clean_word_meaning_list(value, 'synonyms')
+
+    def validate_antonyms(self, value):
+        return self._clean_word_meaning_list(value, 'antonyms')
+
+    def _clean_word_meaning_list(self, value, field_name):
+        if value in (None, ''):
+            return []
+        if not isinstance(value, list):
+            raise serializers.ValidationError(f'{field_name} must be a list of {{word, meaning}} entries.')
+
+        cleaned = []
+        for entry in value:
+            if not isinstance(entry, dict):
+                raise serializers.ValidationError(f'Each {field_name} entry must be an object with word and meaning.')
+            word = (entry.get('word') or '').strip()
+            meaning = (entry.get('meaning') or '').strip()
+            if not word:
+                continue
+            cleaned.append({'word': word, 'meaning': meaning})
+        return cleaned
+
     def validate(self, attrs):
         lesson = attrs.get('lesson') or getattr(self.instance, 'lesson', None)
         word = attrs.get('word') or getattr(self.instance, 'word', None)
@@ -130,10 +153,6 @@ class VocabularySerializer(serializers.ModelSerializer):
             attrs['pronunciation'] = attrs['pronunciation'].strip()
         if 'example' in attrs:
             attrs['example'] = attrs['example'].strip()
-        if 'synonyms' in attrs:
-            attrs['synonyms'] = attrs['synonyms'].strip()
-        if 'antonyms' in attrs:
-            attrs['antonyms'] = attrs['antonyms'].strip()
 
         if not lesson:
             raise serializers.ValidationError({'lesson': 'Lesson is required.'})

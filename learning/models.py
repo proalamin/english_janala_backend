@@ -107,8 +107,8 @@ class Vocabulary(models.Model):
     example = models.TextField(blank=True)
     part_of_speech = models.CharField(max_length=20, choices=PartOfSpeech.choices, blank=True)
     difficulty = models.CharField(max_length=10, choices=Difficulty.choices, default=Difficulty.MEDIUM)
-    synonyms = models.CharField(max_length=255, blank=True, help_text='Comma-separated synonyms.')
-    antonyms = models.CharField(max_length=255, blank=True, help_text='Comma-separated antonyms.')
+    synonyms = models.JSONField(default=list, blank=True, help_text='List of {"word": ..., "meaning": ...} objects.')
+    antonyms = models.JSONField(default=list, blank=True, help_text='List of {"word": ..., "meaning": ...} objects.')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
