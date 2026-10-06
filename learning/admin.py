@@ -1,11 +1,19 @@
 from django.contrib import admin
 
-from .models import Lesson, Vocabulary
+from .models import Lesson, Segment, Vocabulary
+
+
+@admin.register(Segment)
+class SegmentAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'created_at', 'updated_at')
+    search_fields = ('name', 'description')
+    ordering = ('name',)
 
 
 @admin.register(Lesson)
 class LessonAdmin(admin.ModelAdmin):
-    list_display = ('id', 'title', 'created_at', 'updated_at')
+    list_display = ('id', 'title', 'segment', 'vocabulary_count', 'created_at', 'updated_at')
+    list_filter = ('segment',)
     search_fields = ('title', 'description')
     ordering = ('title',)
 

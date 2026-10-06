@@ -5,17 +5,55 @@ from rest_framework import generics
 from rest_framework import status
 from rest_framework.response import Response
 
-from .models import Lesson, Vocabulary
-from .serializers import LessonSerializer, VocabularySerializer
+from .models import Lesson, Segment, Vocabulary
+from .serializers import LessonSerializer, SegmentSerializer, VocabularySerializer
+
+
+class SegmentListCreateAPIView(generics.ListCreateAPIView):
+    queryset = Segment.objects.all()
+    serializer_class = SegmentSerializer
+
+
+class SegmentDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Segment.objects.all()
+    serializer_class = SegmentSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        segment = self.get_object()
+        try:
+            segment.delete()
+        except ProtectedError:
+            return Response(
+                {
+                    'detail': 'This segment has bundles. Delete or move those bundles first.'
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SegmentLessonsListAPIView(generics.ListAPIView):
+    serializer_class = LessonSerializer
+
+    def get_queryset(self):
+        segment_id = self.kwargs['segment_id']
+        get_object_or_404(Segment, pk=segment_id)
+        return Lesson.objects.filter(segment_id=segment_id)
 
 
 class LessonListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Lesson.objects.all()
     serializer_class = LessonSerializer
+
+    def get_queryset(self):
+        queryset = Lesson.objects.select_related('segment').all()
+        segment_id = self.request.query_params.get('segment')
+        if segment_id:
+            queryset = queryset.filter(segment_id=segment_id)
+        return queryset
 
 
 class LessonDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Lesson.objects.all()
+    queryset = Lesson.objects.select_related('segment').all()
     serializer_class = LessonSerializer
 
     def destroy(self, request, *args, **kwargs):
