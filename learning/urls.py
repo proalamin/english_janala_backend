@@ -4,6 +4,8 @@ from .views import (
     LessonDetailAPIView,
     LessonListCreateAPIView,
     LessonVocabularyListAPIView,
+    MarkWordsKnownAPIView,
+    ProgressSummaryAPIView,
     SegmentDetailAPIView,
     SegmentListCreateAPIView,
     SegmentLessonsListAPIView,
@@ -15,6 +17,8 @@ from .views import (
 
 
 urlpatterns = [
+    path('progress/words/', MarkWordsKnownAPIView.as_view(), name='mark-words-known'),
+    path('progress/summary/', ProgressSummaryAPIView.as_view(), name='progress-summary'),
     path('segments/', SegmentListCreateAPIView.as_view(), name='segment-list-create'),
     path('segments/<int:pk>/', SegmentDetailAPIView.as_view(), name='segment-detail'),
     path('segments/<int:segment_id>/lessons/', SegmentLessonsListAPIView.as_view(), name='segment-lessons'),

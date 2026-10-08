@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 
@@ -42,6 +43,7 @@ class Segment(models.Model):
             serial=next_serial,
             title=f'{self.name} - Bundle {next_serial}',
             description=description,
+            is_free=(next_serial == 1),
         )
 
     def __str__(self):
@@ -53,6 +55,10 @@ class Lesson(models.Model):
     serial = models.PositiveIntegerField()
     title = models.CharField(max_length=150, unique=True)
     description = models.TextField(blank=True)
+    is_free = models.BooleanField(
+        default=False,
+        help_text='Free-preview bundles can be browsed without logging in.',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -120,3 +126,19 @@ class Vocabulary(models.Model):
 
     def __str__(self):
         return f'{self.word} - {self.lesson.title}'
+
+
+class WordProgress(models.Model):
+    """Records that a logged-in user has correctly matched/learned a word."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='word_progress')
+    vocabulary = models.ForeignKey(Vocabulary, on_delete=models.CASCADE, related_name='progress_entries')
+    learned_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'vocabulary'], name='unique_user_word_progress'),
+        ]
+        ordering = ['-learned_at']
+
+    def __str__(self):
+        return f'{self.user} knows {self.vocabulary.word}'

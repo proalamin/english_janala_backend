@@ -2,18 +2,44 @@ from django.db.models import Max
 
 from rest_framework import serializers
 
-from .models import BUNDLE_CAPACITY, Lesson, Segment, Vocabulary
+from .models import BUNDLE_CAPACITY, Lesson, Segment, Vocabulary, WordProgress
 
 
 class SegmentSerializer(serializers.ModelSerializer):
     bundle_count = serializers.SerializerMethodField()
+    total_words = serializers.SerializerMethodField()
+    known_count = serializers.SerializerMethodField()
+    progress_percent = serializers.SerializerMethodField()
 
     class Meta:
         model = Segment
-        fields = ['id', 'name', 'description', 'bundle_count', 'created_at', 'updated_at']
+        fields = [
+            'id', 'name', 'description', 'bundle_count', 'total_words',
+            'known_count', 'progress_percent', 'created_at', 'updated_at',
+        ]
 
     def get_bundle_count(self, obj):
         return obj.bundles.count()
+
+    def get_total_words(self, obj):
+        return Vocabulary.objects.filter(lesson__segment=obj).count()
+
+    def _progress_queryset(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return None
+        return WordProgress.objects.filter(user=request.user, vocabulary__lesson__segment=obj)
+
+    def get_known_count(self, obj):
+        queryset = self._progress_queryset(obj)
+        return queryset.count() if queryset is not None else None
+
+    def get_progress_percent(self, obj):
+        known = self.get_known_count(obj)
+        if known is None:
+            return None
+        total = self.get_total_words(obj)
+        return round((known / total) * 100) if total else 0
 
     def validate_name(self, value):
         name = value.strip()
@@ -35,6 +61,8 @@ class LessonSerializer(serializers.ModelSerializer):
     is_full = serializers.ReadOnlyField()
     capacity = serializers.SerializerMethodField()
     serial = serializers.ReadOnlyField()
+    known_count = serializers.SerializerMethodField()
+    progress_percent = serializers.SerializerMethodField()
 
     class Meta:
         model = Lesson
@@ -45,9 +73,12 @@ class LessonSerializer(serializers.ModelSerializer):
             'serial',
             'title',
             'description',
+            'is_free',
             'vocabulary_count',
             'is_full',
             'capacity',
+            'known_count',
+            'progress_percent',
             'created_at',
             'updated_at',
         ]
@@ -58,6 +89,19 @@ class LessonSerializer(serializers.ModelSerializer):
 
     def get_capacity(self, obj):
         return BUNDLE_CAPACITY
+
+    def get_known_count(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return None
+        return WordProgress.objects.filter(user=request.user, vocabulary__lesson=obj).count()
+
+    def get_progress_percent(self, obj):
+        known = self.get_known_count(obj)
+        if known is None:
+            return None
+        total = obj.vocabulary_count
+        return round((known / total) * 100) if total else 0
 
     def validate_title(self, value):
         title = value.strip() if value else ''
@@ -77,6 +121,8 @@ class LessonSerializer(serializers.ModelSerializer):
         if not validated_data.get('title'):
             validated_data['title'] = f'{segment.name} - Bundle {next_serial}'
         validated_data['serial'] = next_serial
+        if next_serial == 1:
+            validated_data['is_free'] = True
         return super().create(validated_data)
 
 
